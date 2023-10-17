@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>No Internet Connection</title>
+    <link rel="stylesheet" href="./bootstrap.min.css" />
+    <style>
+      .linier-layout {
+        margin: 0;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        -ms-transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%);
+      }
+    </style>
+</head>
+<body>
+<div class="linier-layout" align="center">
+    <div class="logo pb-3">
+        <img
+                src="./logo.png"
+                alt=""
+                srcset=""
+                width="140px"
+                class="animated-img"
+        />
+    </div>
+    <p class="fs-4 fw-bold">There is no Internet Connection</p>
+    <p>Check your connection or refresh</p>
+
+    <div class="pt-3">
+        <button class="btn btn-outline-secondary btn-lg" onclick="refresh()">
+            Refresh
+        </button>
+    </div>
+</div>
+
+<script>
+      function refresh() {
+        if (navigator.onLine) {
+          location.replace("https://apps.ssayomart.com");
+        }
+      }
+    </script>
+</body>
+</html>

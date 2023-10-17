@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "574396008673",
+    "project_id": "pushnotificationssayomar-8c47a",
+    "storage_bucket": "pushnotificationssayomar-8c47a.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:574396008673:android:36ee1ea49fe23546618fa0",
+        "android_client_info": {
+          "package_name": "com.javasuperfood.ssayomart"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "574396008673-4holp5du3u03k4qij06ep8v75l3g6n5o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIh2TsY-cnCCbkgCTOhD8fGYKIM-h6MXg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "574396008673-4holp5du3u03k4qij06ep8v75l3g6n5o.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

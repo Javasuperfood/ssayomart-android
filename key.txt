@@ -1,0 +1,4 @@
+keypath : ./key.jks
+password : javasuperfood15139
+alias : javasuperfood
+password : javasuperfood15139
