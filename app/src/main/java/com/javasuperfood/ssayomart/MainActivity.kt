@@ -47,10 +47,10 @@ class MainActivity : ComponentActivity() {
 
     @Override
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+            super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         init()
-        setupUI()
+//        setupUI() //go to animatedZoomOut()
         onSignalInit()
     }
 
@@ -64,27 +64,44 @@ class MainActivity : ComponentActivity() {
     private fun init() {
         url = "https://apps.ssayomart.com/"
         loading = findViewById<ProgressBar>(R.id.pb_loading)
+        loading.visibility = View.GONE
         icon_init = findViewById<ImageView>(R.id.icon_init)
         text_noinet = findViewById<TextView>(R.id.text_noinet)
         bg_splash = findViewById<TextView>(R.id.bg_splash)
-        webView = findViewById<WebView>(R.id.wv_page)
+
+        swipeRefresh()
+        animatedInit()
+    }
+
+    private  fun swipeRefresh(){
         val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.refreshLayout)
         swipeRefreshLayout.setOnRefreshListener {
+            webView.reload()
             swipeRefreshLayout.isRefreshing = false
             text_noinet.visibility = View.GONE
         }
-
+    }
+    fun spalsh_gone(){
+        icon_init.clearAnimation()
+        icon_init.visibility = View.GONE
+        bg_splash.visibility = View.GONE
+        loading.visibility = View.GONE
+    }
+    private fun animatedInit() {
+        val timer = Timer()
+        val delay = 1300 // Delay in milliseconds
+        val period = 2000 // Interval in milliseconds
         val scaleAnimation = ScaleAnimation(
-            1.0f, // Start scale factor (X-axis)
-            2.0f, // End scale factor (X-axis) - You can adjust this value as needed
-            1.0f, // Start scale factor (Y-axis)
-            2.0f, // End scale factor (Y-axis) - You can adjust this value as needed
+            0.0f, // Start scale factor (X-axis)
+            2.1f, // End scale factor (X-axis) - You can adjust this value as needed
+            0.0f, // Start scale factor (Y-axis)
+            2.1f, // End scale factor (Y-axis) - You can adjust this value as needed
             Animation.RELATIVE_TO_SELF,
             0.5f, // X-axis pivot point (center)
             Animation.RELATIVE_TO_SELF,
             0.5f  // Y-axis pivot point (center)
         )
-        scaleAnimation.duration = 1000 // Set the duration of the animation in milliseconds
+        scaleAnimation.duration = 400 // Set the duration of the animation in milliseconds
         scaleAnimation.fillAfter = true // Keep the scaling after the animation finishes
 
         // Set an animation listener to handle any necessary logic after the animation
@@ -94,19 +111,51 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onAnimationEnd(animation: Animation?) {
-                // Animation ended, you can perform additional actions here
-
+                timer.cancel()
+                animatedZoomOut()
             }
 
             override fun onAnimationRepeat(animation: Animation?) {
                 // Animation repeated
             }
         })
+        val task = object : TimerTask() {
+            override fun run() {
+                icon_init.startAnimation(scaleAnimation)
+            }
+        }
+        timer.scheduleAtFixedRate(task, delay.toLong(), period.toLong())
+    }
+    private fun animatedZoomOut() {
+        val scaleAnimation = ScaleAnimation(
+            2.1f, // Start scale factor (X-axis)
+            2.0f, // End scale factor (X-axis) - You can adjust this value as needed
+            2.1f, // Start scale factor (Y-axis)
+            2.0f, // End scale factor (Y-axis) - You can adjust this value as needed
+            Animation.RELATIVE_TO_SELF,
+            0.5f, // X-axis pivot point (center)
+            Animation.RELATIVE_TO_SELF,
+            0.5f  // Y-axis pivot point (center)
+        )
+        scaleAnimation.duration = 160 // Set the duration of the animation in milliseconds
+        scaleAnimation.fillAfter = true // Keep the scaling after the animation finishes
+        scaleAnimation.setAnimationListener(object : Animation.AnimationListener {
+            override fun onAnimationStart(animation: Animation?) {
+                // Animation started
+            }
 
-        // Start the animation on the icon_init ImageView
+            override fun onAnimationEnd(animation: Animation?) {
+                //end adnimation
+//                spalsh_gone()
+                setupUI()
+            }
+
+            override fun onAnimationRepeat(animation: Animation?) {
+                // Animation repeated
+            }
+        })
         icon_init.startAnimation(scaleAnimation)
     }
-
     private fun setupUI() {
         if (isOnline(this)) {
             loadWebview()
@@ -125,25 +174,34 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadWebview() {
+        webView = findViewById<WebView>(R.id.wv_page)
         val AndroidVersion = Build.VERSION.SDK_INT
         val BuildTagetc = Build.MODEL
         val WebKitRev = Build.VERSION.RELEASE
         val appName = "Ssayomart"
         val appVersion = "1.0.3"
-        val customUserAgent =
-            "Mozilla/5.0 (Linux; Android $AndroidVersion; $BuildTagetc) AppleWebKit/$WebKitRev (KHTML, like Gecko) Chrome/88.0.4324.181 Mobile Safari/535.19 $appName/$appVersion"
+
+        val customUserAgent = "Mozilla/5.0 (Linux; Android $AndroidVersion; $BuildTagetc) AppleWebKit/$WebKitRev (KHTML, like Gecko) Chrome/88.0.4324.181 Mobile Safari/535.19 $appName/$appVersion"
+
         webView.webViewClient = myWebclient()
-        webView.settings.userAgentString = customUserAgent
-        webView.settings.javaScriptEnabled = true
-        webView.settings.domStorageEnabled = true
-        webView.settings.loadWithOverviewMode = true
-        webView.settings.defaultTextEncodingName = "utf-8"
-        webView.settings.cacheMode = WebSettings.LOAD_DEFAULT
-        webView.settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-        webView.settings.domStorageEnabled = true
-        webView.settings.databaseEnabled = true
-        webView.settings.setSupportMultipleWindows(false)
+        webView.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            loadWithOverviewMode = true
+            defaultTextEncodingName = "utf-8"
+            cacheMode = WebSettings.LOAD_DEFAULT
+            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            domStorageEnabled = true
+            databaseEnabled = true
+            setSupportMultipleWindows(false)
+            builtInZoomControls = false
+            displayZoomControls = false
+            setSupportZoom(true)
+            userAgentString = customUserAgent
+        }
+
         webView.loadUrl(url)
+
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
                 webView: WebView, filePathCallback: ValueCallback<Array<Uri>>,
@@ -199,10 +257,12 @@ class MainActivity : ComponentActivity() {
                 return true
             }
         }
+
         if (!isOnline(this)) {
             webView.loadUrl("file:///android_asset/lost.html")
         }
     }
+
 
     @Throws(IOException::class)
     private fun createImageFile(): File {
@@ -250,10 +310,7 @@ class MainActivity : ComponentActivity() {
     inner class myWebclient : WebViewClient() {
         override fun onPageFinished(view: WebView, url: String) {
             super.onPageFinished(view, url)
-            icon_init.clearAnimation()
-            icon_init.visibility = View.GONE
-            loading.visibility = View.GONE
-            bg_splash.visibility = View.GONE
+            spalsh_gone()
         }
 
         override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {

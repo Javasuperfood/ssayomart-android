@@ -37,13 +37,15 @@
 
         <ImageView
             android:id="@+id/icon_init"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_width="60dp"
+            android:visibility="invisible"
+            android:layout_height="60dp"
             android:src="@mipmap/ic_launcher"
             android:layout_marginBottom="30dp"/>
         <ProgressBar
             android:id="@+id/pb_loading"
             android:indeterminateTint="#ec2614"
+            android:layout_marginTop="30dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
     </LinearLayout>
