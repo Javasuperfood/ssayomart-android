@@ -2,6 +2,7 @@ package com.javasuperfood.ssayomart
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.Dialog
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
@@ -14,9 +15,11 @@ import android.provider.MediaStore
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.ScaleAnimation
 import android.webkit.*
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -24,6 +27,14 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.onesignal.OneSignal
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -38,20 +49,43 @@ class MainActivity : ComponentActivity() {
     lateinit var text_noinet: TextView
     private lateinit var url: String
     private lateinit var webView: WebView
+    private var savedCookies: String? = null
+
+    //Web error
+    lateinit var icon_404: ImageView
+    lateinit var text_404: TextView
+    lateinit var button_refresh: Button
+    lateinit var bg_noint: TextView
 
     //for attach files
     private var mCameraPhotoPath: String? = null
     private var mFilePathCallback: ValueCallback<Array<Uri>>? = null
-
+    private lateinit var okayText: TextView
+    private lateinit var cancelText: TextView
     val INPUT_FILE_REQUEST_CODE = 1
+
+    //Inisiasi DEV Or Prod
+    private var env: String? = "produk"
+    private var home: String? = null
+
+    //error
+    private var webError: String? = null
 
     @Override
     override fun onCreate(savedInstanceState: Bundle?) {
-            super.onCreate(savedInstanceState)
+        super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         init()
 //        setupUI() //go to animatedZoomOut()
         onSignalInit()
+
+        button_refresh.setOnClickListener {
+            webView.reload()
+            bg_noint.visibility = View.INVISIBLE
+            text_404.visibility = View.INVISIBLE
+            icon_404.visibility = View.INVISIBLE
+            button_refresh.visibility = View.INVISIBLE
+        }
     }
 
     private fun onSignalInit() {
@@ -63,30 +97,87 @@ class MainActivity : ComponentActivity() {
 
     private fun init() {
         url = "https://apps.ssayomart.com/"
+        home = "https://apps.ssayomart.com"
+        if (env == "dev") {
+            url = "http://192.168.15.181/"
+            home = "http://192.168.15.181"
+        }
+        if (env == "devOnline") {
+            url = "https://public-dev.ssayomart.com/"
+            home = "https://public-dev.ssayomart.com"
+        }
         loading = findViewById<ProgressBar>(R.id.pb_loading)
         loading.visibility = View.GONE
         icon_init = findViewById<ImageView>(R.id.icon_init)
         text_noinet = findViewById<TextView>(R.id.text_noinet)
         bg_splash = findViewById<TextView>(R.id.bg_splash)
+        icon_404 = findViewById<ImageView>(R.id.icon_404)
+        text_404 = findViewById<TextView>(R.id.text_404)
+        button_refresh = findViewById<Button>(R.id.button_refresh)
+        bg_noint = findViewById<TextView>(R.id.bg_noint)
+
 
         swipeRefresh()
         animatedInit()
+
     }
 
-    private  fun swipeRefresh(){
+    private fun swipeRefresh() {
         val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.refreshLayout)
         swipeRefreshLayout.setOnRefreshListener {
+            sendUuid()
+            if (webView.url == "$home" || webView.url == "$home/" || webView.url == "$home/index.php/" || webView.url == "$home/index.php") {
+                webView.clearCache(true)
+            }
             webView.reload()
+
             swipeRefreshLayout.isRefreshing = false
             text_noinet.visibility = View.GONE
         }
     }
-    fun spalsh_gone(){
-        icon_init.clearAnimation()
-        icon_init.visibility = View.GONE
-        bg_splash.visibility = View.GONE
-        loading.visibility = View.GONE
+
+    fun sendUuid() {
+        Log.d("CookieA", "Cookie: $savedCookies")
+        // Mengambil subscriberId dari OneSignal
+        val subscriberId = OneSignal.getDeviceState()?.userId
+        Log.d("subscriberId", "Subscriber ID: $subscriberId")
+
+        // URL tempat Anda ingin mengirim permintaan POST
+        val url = "$url/api/set-uuid"
+
+        // Membuat body request
+        val requestBody =
+            "uuid=$subscriberId".toRequestBody("application/x-www-form-urlencoded".toMediaType())
+
+        // Membuat request POST
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Cookie", "$savedCookies")
+            .post(requestBody)
+            .build()
+
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                // Melakukan permintaan HTTP POST di dalam coroutine IO
+                val response: Response = OkHttpClient().newCall(request).execute()
+
+                // Mengecek apakah permintaan sukses atau tidak
+                if (response.isSuccessful) {
+                    // Tindakan yang akan diambil jika permintaan sukses
+                    Log.d("ResponseA", "Success: " + response.body?.string())
+                } else {
+                    // Tindakan yang akan diambil jika permintaan gagal
+                    Log.e("ResponseA", "Error: " + response.body?.string())
+                    Log.e("ResponseA", "Error: " + response.code)
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+                Log.e("ResponseA", "Exception: " + e.message)
+            }
+        }
     }
+
+
     private fun animatedInit() {
         val timer = Timer()
         val delay = 1300 // Delay in milliseconds
@@ -126,6 +217,7 @@ class MainActivity : ComponentActivity() {
         }
         timer.scheduleAtFixedRate(task, delay.toLong(), period.toLong())
     }
+
     private fun animatedZoomOut() {
         val scaleAnimation = ScaleAnimation(
             2.1f, // Start scale factor (X-axis)
@@ -156,6 +248,7 @@ class MainActivity : ComponentActivity() {
         })
         icon_init.startAnimation(scaleAnimation)
     }
+
     private fun setupUI() {
         if (isOnline(this)) {
             loadWebview()
@@ -181,7 +274,8 @@ class MainActivity : ComponentActivity() {
         val appName = "Ssayomart"
         val appVersion = "1.0.3"
 
-        val customUserAgent = "Mozilla/5.0 (Linux; Android $AndroidVersion; $BuildTagetc) AppleWebKit/$WebKitRev (KHTML, like Gecko) Chrome/88.0.4324.181 Mobile Safari/535.19 $appName/$appVersion"
+        val customUserAgent =
+            "Mozilla/5.0 (Linux; Android $AndroidVersion; $BuildTagetc) AppleWebKit/$WebKitRev (KHTML, like Gecko) Chrome/88.0.4324.181 Mobile Safari/535.19 $appName/$appVersion"
 
         webView.webViewClient = myWebclient()
         webView.settings.apply {
@@ -194,14 +288,13 @@ class MainActivity : ComponentActivity() {
             domStorageEnabled = true
             databaseEnabled = true
             setSupportMultipleWindows(false)
-            builtInZoomControls = false
-            displayZoomControls = false
             setSupportZoom(true)
+            builtInZoomControls = true
+            displayZoomControls = false
             userAgentString = customUserAgent
         }
 
         webView.loadUrl(url)
-
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
                 webView: WebView, filePathCallback: ValueCallback<Array<Uri>>,
@@ -257,10 +350,6 @@ class MainActivity : ComponentActivity() {
                 return true
             }
         }
-
-        if (!isOnline(this)) {
-            webView.loadUrl("file:///android_asset/lost.html")
-        }
     }
 
 
@@ -311,19 +400,107 @@ class MainActivity : ComponentActivity() {
         override fun onPageFinished(view: WebView, url: String) {
             super.onPageFinished(view, url)
             spalsh_gone()
+            getCookie(url)
+            if (url == "$home" || url == "$home/" || url == "$home/index.php/" || url == "$home/index.php") {
+                Log.d("WebViewApp", "InHome: $url")
+                sendUuid()
+            }
+            Log.d("WebViewAppA", "onPageFinished: $view")
+            if(webError == null){
+                webView.visibility = View.VISIBLE
+            }
+            webError = null
         }
 
         override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
             view.loadUrl(url)
             return true
         }
+
+        override fun onReceivedError(
+            view: WebView?,
+            request: WebResourceRequest?,
+            error: WebResourceError?
+        ) {
+            Log.d("webErrorA", error.toString())
+            webError = error.toString()
+            visible_view_web_error()
+        }
+//        override fun onReceivedHttpError(
+//            view: WebView?,
+//            request: WebResourceRequest?,
+//            errorResponse: WebResourceResponse?
+//        ) {
+//            if (errorResponse != null && errorResponse.statusCode == 404) {
+//                Log.d("ResponwebA", "$errorResponse")
+//                // Handle 404 error here
+//                bg_noint.visibility = View.VISIBLE
+//                text_404.visibility = View.VISIBLE
+//                icon_404.visibility = View.VISIBLE
+//                button_refresh.visibility = View.VISIBLE
+//            }else{
+//                bg_noint.visibility = View.INVISIBLE
+//                text_404.visibility = View.INVISIBLE
+//                icon_404.visibility = View.INVISIBLE
+//                button_refresh.visibility = View.INVISIBLE
+//            }
+//        }
+    }
+
+    fun visible_view_web_error() {
+        webView.visibility = View.GONE
+        text_404.visibility = View.VISIBLE
+        icon_404.visibility = View.VISIBLE
+        button_refresh.visibility = View.VISIBLE
+        bg_noint.visibility = View.VISIBLE
+        Toast.makeText(this, "Internet Error", Toast.LENGTH_SHORT).show()
+    }
+
+    fun spalsh_gone() {
+        icon_init.clearAnimation()
+        icon_init.visibility = View.GONE
+        bg_splash.visibility = View.GONE
+        loading.visibility = View.GONE
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if ((keyCode == KeyEvent.KEYCODE_BACK) && webView.canGoBack()) {
             webView.goBack()
             return true
+        } else {
+            // Jika pengguna berada di halaman utama, tampilkan dialog keluar
+            val dialog = Dialog(this)
+            dialog.setContentView(R.layout.dialog)
+            dialog.window?.setLayout(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            dialog.setCancelable(false)
+            dialog.window?.attributes?.windowAnimations = R.style.animation
+
+            okayText = dialog.findViewById(R.id.okay_text)
+            cancelText = dialog.findViewById(R.id.cancel_text)
+
+            okayText.setOnClickListener {
+                finish()
+                Toast.makeText(this, "okay clicked", Toast.LENGTH_SHORT).show()
+            }
+
+            cancelText.setOnClickListener {
+                dialog.dismiss()
+            }
+            dialog.show()
+            return true
         }
         return super.onKeyDown(keyCode, event)
     }
+
+    fun getCookie(url: String) {
+        val cookieManager = CookieManager.getInstance()
+        val cookies = cookieManager.getCookie(url)
+        if (cookies != null) {
+            savedCookies = cookies
+        }
+    }
+
 }

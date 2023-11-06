@@ -12,9 +12,8 @@ android {
         applicationId = "com.javasuperfood.ssayomart"
         minSdk = 26
         targetSdk = 33
-        versionCode = 5
-        versionName = "1.0.5"
-
+        versionCode = 7
+        versionName = "1.0.7"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -53,6 +52,7 @@ android {
 
 dependencies {
 
+    implementation("com.squareup.okhttp3:okhttp:4.9.2")
     implementation("com.onesignal:OneSignal:[4.0.0, 4.99.99]")
     implementation(platform("com.google.firebase:firebase-bom:32.2.2"))
     implementation("androidx.core:core-ktx:1.9.0")

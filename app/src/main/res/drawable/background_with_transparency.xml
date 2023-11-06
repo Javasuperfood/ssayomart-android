@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background with 50% transparency -->
+    <item android:drawable="@android:color/white" />
+    <item>
+        <shape>
+            <solid android:color="@android:color/transparent" /> <!-- 50% transparency (80 in hexadecimal) -->
+        </shape>
+    </item>
+</layer-list>
