@@ -23,7 +23,7 @@
         android:gravity="center"
         android:padding="10dp"
         android:textStyle="bold"
-        android:text="Kelaur dari Ssayomart" />
+        android:text="Keluar dari Ssayomart" />
 
     <RelativeLayout
         android:layout_width="match_parent"

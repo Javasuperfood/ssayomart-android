@@ -68,17 +68,15 @@ class MainActivity : ComponentActivity() {
     private var env: String? = "produk"
     private var home: String? = null
 
-    //error
-    private var webError: String? = null
 
     @Override
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        Log.d("OnCreateA" ,"onCreate Start")
         init()
 //        setupUI() //go to animatedZoomOut()
         onSignalInit()
-
         button_refresh.setOnClickListener {
             webView.reload()
             bg_noint.visibility = View.INVISIBLE
@@ -405,11 +403,8 @@ class MainActivity : ComponentActivity() {
                 Log.d("WebViewApp", "InHome: $url")
                 sendUuid()
             }
-            Log.d("WebViewAppA", "onPageFinished: $view")
-            if(webError == null){
-                webView.visibility = View.VISIBLE
-            }
-            webError = null
+            webView.visibility = View.VISIBLE
+
         }
 
         override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
@@ -423,7 +418,6 @@ class MainActivity : ComponentActivity() {
             error: WebResourceError?
         ) {
             Log.d("webErrorA", error.toString())
-            webError = error.toString()
             visible_view_web_error()
         }
 //        override fun onReceivedHttpError(
