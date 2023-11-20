@@ -12,8 +12,8 @@ android {
         applicationId = "com.javasuperfood.ssayomart"
         minSdk = 26
         targetSdk = 33
-        versionCode = 7
-        versionName = "1.0.7"
+        versionCode = 10
+        versionName = "1.0.14"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -51,7 +51,12 @@ android {
 }
 
 dependencies {
+    implementation ("com.google.android.play:integrity:1.1.0")
 
+    implementation("com.google.android.play:app-update:2.0.1")
+
+    // For Kotlin users also import the Kotlin extensions library for Play In-App Update:
+    implementation("com.google.android.play:app-update-ktx:2.0.1")
     implementation("com.squareup.okhttp3:okhttp:4.9.2")
     implementation("com.onesignal:OneSignal:[4.0.0, 4.99.99]")
     implementation(platform("com.google.firebase:firebase-bom:32.2.2"))

@@ -1,11 +1,13 @@
 package com.javasuperfood.ssayomart
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Dialog
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
@@ -25,7 +27,14 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import com.google.android.play.core.appupdate.AppUpdateManager
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.UpdateAvailability
 import com.onesignal.OneSignal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -63,27 +72,62 @@ class MainActivity : ComponentActivity() {
     private lateinit var okayText: TextView
     private lateinit var cancelText: TextView
     val INPUT_FILE_REQUEST_CODE = 1
+    private val LOCATION_PERMISSION_REQUEST_CODE = 1001
+    var mGeoLocationRequestOrigin: String? = null
+    var mGeoLocationCallback: GeolocationPermissions.Callback? = null
+
+    private lateinit var appUpdateManager: AppUpdateManager
+    private val MY_REQUEST_CODE = 42
 
     //Inisiasi DEV Or Prod
-    private var env: String? = "produk"
+    private var env: String? = "production"
     private var home: String? = null
-
 
     @Override
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        Log.d("OnCreateA" ,"onCreate Start")
+        val uri: Uri? = intent.data
+        url = uri.toString()
         init()
 //        setupUI() //go to animatedZoomOut()
         onSignalInit()
+        appUpdateManager = AppUpdateManagerFactory.create(this)
+
+        // Periksa ketersediaan update dan tampilkan notifikasi jika diperlukan
+        checkForUpdates()
+
+
         button_refresh.setOnClickListener {
-            webView.reload()
-            bg_noint.visibility = View.INVISIBLE
-            text_404.visibility = View.INVISIBLE
-            icon_404.visibility = View.INVISIBLE
-            button_refresh.visibility = View.INVISIBLE
+            Toast.makeText(this, "Refreshing", Toast.LENGTH_SHORT).show()
+            if (isOnline(this)) {
+                webView.reload()
+            } else {
+                Toast.makeText(this, "Internet Error", Toast.LENGTH_SHORT).show()
+            }
+
         }
+    }
+
+    private fun checkForUpdates() {
+        val appUpdateInfoTask = appUpdateManager.appUpdateInfo
+        appUpdateInfoTask.addOnSuccessListener { appUpdateInfo ->
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+                && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
+            ) {
+                // Ada update yang tersedia, lakukan sesuatu di sini (tampilkan notifikasi, dll.)
+                startUpdate(appUpdateInfo)
+            }
+        }
+    }
+
+    private fun startUpdate(appUpdateInfo: AppUpdateInfo) {
+        appUpdateManager.startUpdateFlowForResult(
+            appUpdateInfo,
+            AppUpdateType.IMMEDIATE,
+            this,
+            MY_REQUEST_CODE
+        )
     }
 
     private fun onSignalInit() {
@@ -94,11 +138,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun init() {
-        url = "https://apps.ssayomart.com/"
+        if (url == "null") {
+            url = "https://apps.ssayomart.com/"
+        }
         home = "https://apps.ssayomart.com"
         if (env == "dev") {
-            url = "http://192.168.15.181/"
-            home = "http://192.168.15.181"
+            url = "http://localhost:8080/"
+            home = "http://192.168.15.181:8080"
         }
         if (env == "devOnline") {
             url = "https://public-dev.ssayomart.com/"
@@ -118,6 +164,22 @@ class MainActivity : ComponentActivity() {
         swipeRefresh()
         animatedInit()
 
+    }
+
+    private fun requestLocationPermission() {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                LOCATION_PERMISSION_REQUEST_CODE
+            )
+        } else {
+            //
+        }
     }
 
     private fun swipeRefresh() {
@@ -248,6 +310,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setupUI() {
+        Log.d("SetUIA", "this: $this")
         if (isOnline(this)) {
             loadWebview()
         } else {
@@ -276,24 +339,15 @@ class MainActivity : ComponentActivity() {
             "Mozilla/5.0 (Linux; Android $AndroidVersion; $BuildTagetc) AppleWebKit/$WebKitRev (KHTML, like Gecko) Chrome/88.0.4324.181 Mobile Safari/535.19 $appName/$appVersion"
 
         webView.webViewClient = myWebclient()
-        webView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            loadWithOverviewMode = true
-            defaultTextEncodingName = "utf-8"
-            cacheMode = WebSettings.LOAD_DEFAULT
-            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            domStorageEnabled = true
-            databaseEnabled = true
-            setSupportMultipleWindows(false)
-            setSupportZoom(true)
-            builtInZoomControls = true
-            displayZoomControls = false
-            userAgentString = customUserAgent
-        }
-
-        webView.loadUrl(url)
         webView.webChromeClient = object : WebChromeClient() {
+            override fun onGeolocationPermissionsShowPrompt(
+                origin: String?,
+                callback: GeolocationPermissions.Callback?
+            ) {
+                callback?.invoke(origin, true, false)
+                super.onGeolocationPermissionsShowPrompt(origin, callback)
+            }
+
             override fun onShowFileChooser(
                 webView: WebView, filePathCallback: ValueCallback<Array<Uri>>,
                 fileChooserParams: WebChromeClient.FileChooserParams
@@ -348,6 +402,25 @@ class MainActivity : ComponentActivity() {
                 return true
             }
         }
+        webView.settings.apply {
+            javaScriptEnabled = true
+            javaScriptCanOpenWindowsAutomatically = true
+            setGeolocationEnabled(true)
+            domStorageEnabled = true
+            loadWithOverviewMode = true
+            defaultTextEncodingName = "utf-8"
+            cacheMode = WebSettings.LOAD_DEFAULT
+            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            domStorageEnabled = true
+            databaseEnabled = true
+            setSupportMultipleWindows(false)
+            setSupportZoom(true)
+            builtInZoomControls = true
+            displayZoomControls = false
+            userAgentString = customUserAgent
+        }
+
+        webView.loadUrl(url)
     }
 
 
@@ -367,6 +440,15 @@ class MainActivity : ComponentActivity() {
     }
 
     public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == MY_REQUEST_CODE) {
+            if (resultCode != RESULT_OK) {
+                // Handle update failure
+                return finish()
+            }else {
+                appUpdateManager.completeUpdate()
+            }
+        }
         if (requestCode != INPUT_FILE_REQUEST_CODE || mFilePathCallback == null) {
             super.onActivityResult(requestCode, resultCode, data)
             return
@@ -396,49 +478,40 @@ class MainActivity : ComponentActivity() {
 
     inner class myWebclient : WebViewClient() {
         override fun onPageFinished(view: WebView, url: String) {
-            super.onPageFinished(view, url)
             spalsh_gone()
             getCookie(url)
             if (url == "$home" || url == "$home/" || url == "$home/index.php/" || url == "$home/index.php") {
                 Log.d("WebViewApp", "InHome: $url")
                 sendUuid()
             }
-            webView.visibility = View.VISIBLE
-
+            if (url == "$home/setting/alamat-list" || url == "$home/setting/create-alamat") {
+                requestLocationPermission()
+            }
+            if (isOnline(this@MainActivity)) {
+                bg_noint.visibility = View.INVISIBLE
+                text_404.visibility = View.INVISIBLE
+                icon_404.visibility = View.INVISIBLE
+                button_refresh.visibility = View.INVISIBLE
+                webView.visibility = View.VISIBLE
+            } else {
+                visible_view_web_error()
+            }
+            super.onPageFinished(view, url)
         }
 
         override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
+            if (url.startsWith("market://") || url.startsWith("vnd:youtube") || url.startsWith("tel:") || url.startsWith(
+                    "mailto:"
+                )
+            ) {
+                val intent = Intent(Intent.ACTION_VIEW)
+                intent.data = Uri.parse(url)
+                startActivity(intent)
+                return true
+            }
             view.loadUrl(url)
             return true
         }
-
-        override fun onReceivedError(
-            view: WebView?,
-            request: WebResourceRequest?,
-            error: WebResourceError?
-        ) {
-            Log.d("webErrorA", error.toString())
-            visible_view_web_error()
-        }
-//        override fun onReceivedHttpError(
-//            view: WebView?,
-//            request: WebResourceRequest?,
-//            errorResponse: WebResourceResponse?
-//        ) {
-//            if (errorResponse != null && errorResponse.statusCode == 404) {
-//                Log.d("ResponwebA", "$errorResponse")
-//                // Handle 404 error here
-//                bg_noint.visibility = View.VISIBLE
-//                text_404.visibility = View.VISIBLE
-//                icon_404.visibility = View.VISIBLE
-//                button_refresh.visibility = View.VISIBLE
-//            }else{
-//                bg_noint.visibility = View.INVISIBLE
-//                text_404.visibility = View.INVISIBLE
-//                icon_404.visibility = View.INVISIBLE
-//                button_refresh.visibility = View.INVISIBLE
-//            }
-//        }
     }
 
     fun visible_view_web_error() {
@@ -477,7 +550,6 @@ class MainActivity : ComponentActivity() {
 
             okayText.setOnClickListener {
                 finish()
-                Toast.makeText(this, "okay clicked", Toast.LENGTH_SHORT).show()
             }
 
             cancelText.setOnClickListener {
@@ -497,4 +569,28 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        when (requestCode) {
+            1001 -> {
+                //if permission is cancel result array would be empty
+                if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    //permission was granted
+                    if (mGeoLocationCallback != null) {
+                        mGeoLocationCallback!!.invoke(mGeoLocationRequestOrigin, true, true)
+                    }
+                } else {
+                    //permission denied
+                    if (mGeoLocationCallback != null) {
+                        mGeoLocationCallback!!.invoke(mGeoLocationRequestOrigin, false, false)
+                    }
+                }
+            }
+        }
+    }
 }
