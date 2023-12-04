@@ -12,8 +12,8 @@ android {
         applicationId = "com.javasuperfood.ssayomart"
         minSdk = 26
         targetSdk = 33
-        versionCode = 10
-        versionName = "1.0.14"
+        versionCode = 16
+        versionName = "1.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true

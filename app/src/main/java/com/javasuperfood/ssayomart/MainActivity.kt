@@ -87,13 +87,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        // Get the URL from the intent
         val uri: Uri? = intent.data
         url = uri.toString()
+
         init()
-//        setupUI() //go to animatedZoomOut()
+        // setupUI() //go to animatedZoomOut()
         onSignalInit()
         appUpdateManager = AppUpdateManagerFactory.create(this)
-
         // Periksa ketersediaan update dan tampilkan notifikasi jika diperlukan
         checkForUpdates()
 
@@ -115,7 +116,7 @@ class MainActivity : ComponentActivity() {
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
                 && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
             ) {
-                // Ada update yang tersedia, lakukan sesuatu di sini (tampilkan notifikasi, dll.)
+                //(tampilkan notifikasi, dll.)
                 startUpdate(appUpdateInfo)
             }
         }
@@ -143,7 +144,7 @@ class MainActivity : ComponentActivity() {
         }
         home = "https://apps.ssayomart.com"
         if (env == "dev") {
-            url = "http://localhost:8080/"
+            url = "http://192.168.15.181:8080/"
             home = "http://192.168.15.181:8080"
         }
         if (env == "devOnline") {
@@ -445,7 +446,7 @@ class MainActivity : ComponentActivity() {
             if (resultCode != RESULT_OK) {
                 // Handle update failure
                 return finish()
-            }else {
+            } else {
                 appUpdateManager.completeUpdate()
             }
         }
