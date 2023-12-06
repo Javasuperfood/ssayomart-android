@@ -48,11 +48,14 @@ import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
+import android.graphics.Bitmap
+
 
 const val ONESIGNAL_APP_ID = "1191e933-e52c-466f-946f-e8cab83009d7" //Penting
 
 class MainActivity : ComponentActivity() {
     lateinit var loading: ProgressBar
+    lateinit var progressBar: ProgressBar
     lateinit var icon_init: ImageView
     lateinit var bg_splash: TextView
     lateinit var text_noinet: TextView
@@ -90,7 +93,6 @@ class MainActivity : ComponentActivity() {
         // Get the URL from the intent
         val uri: Uri? = intent.data
         url = uri.toString()
-
         init()
         // setupUI() //go to animatedZoomOut()
         onSignalInit()
@@ -131,7 +133,7 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    private fun onSignalInit() {
+    private fun  onSignalInit() {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE)
         OneSignal.initWithContext(this)
         OneSignal.setAppId(ONESIGNAL_APP_ID)
@@ -152,6 +154,7 @@ class MainActivity : ComponentActivity() {
             home = "https://public-dev.ssayomart.com"
         }
         loading = findViewById<ProgressBar>(R.id.pb_loading)
+        progressBar  = findViewById<ProgressBar>(R.id.progressBarHorizontal)
         loading.visibility = View.GONE
         icon_init = findViewById<ImageView>(R.id.icon_init)
         text_noinet = findViewById<TextView>(R.id.text_noinet)
@@ -338,9 +341,13 @@ class MainActivity : ComponentActivity() {
 
         val customUserAgent =
             "Mozilla/5.0 (Linux; Android $AndroidVersion; $BuildTagetc) AppleWebKit/$WebKitRev (KHTML, like Gecko) Chrome/88.0.4324.181 Mobile Safari/535.19 $appName/$appVersion"
-
+        progressBar.max = 100
         webView.webViewClient = myWebclient()
         webView.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                progressBar.progress = newProgress
+                super.onProgressChanged(view, newProgress)
+            }
             override fun onGeolocationPermissionsShowPrompt(
                 origin: String?,
                 callback: GeolocationPermissions.Callback?
@@ -402,7 +409,9 @@ class MainActivity : ComponentActivity() {
 
                 return true
             }
+
         }
+
         webView.settings.apply {
             javaScriptEnabled = true
             javaScriptCanOpenWindowsAutomatically = true
@@ -420,7 +429,6 @@ class MainActivity : ComponentActivity() {
             displayZoomControls = false
             userAgentString = customUserAgent
         }
-
         webView.loadUrl(url)
     }
 
@@ -478,6 +486,10 @@ class MainActivity : ComponentActivity() {
     }
 
     inner class myWebclient : WebViewClient() {
+        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+            super.onPageStarted(view, url, favicon)
+            progressBar.visibility = View.VISIBLE
+        }
         override fun onPageFinished(view: WebView, url: String) {
             spalsh_gone()
             getCookie(url)
@@ -498,6 +510,7 @@ class MainActivity : ComponentActivity() {
                 visible_view_web_error()
             }
             super.onPageFinished(view, url)
+            progressBar.visibility = View.GONE
         }
 
         override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
