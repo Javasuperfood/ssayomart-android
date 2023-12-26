@@ -428,6 +428,7 @@ class MainActivity : ComponentActivity() {
             builtInZoomControls = true
             displayZoomControls = false
             userAgentString = customUserAgent
+            safeBrowsingEnabled = false
         }
         webView.loadUrl(url)
     }
